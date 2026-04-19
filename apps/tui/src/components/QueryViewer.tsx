@@ -6,6 +6,7 @@ import { colors, SQL_KEYWORDS } from '../theme.js';
 
 interface Props {
   query: IndexedQuery | null;
+  title?: string | null;
 }
 
 const KIND_BADGE: Record<IndexedQuery['queryKind'], string> = {
@@ -31,7 +32,7 @@ function SqlLine({ line }: { line: string }) {
   );
 }
 
-export function QueryViewer({ query }: Props) {
+export function QueryViewer({ query, title }: Props) {
   if (!query) {
     return (
       <Box paddingY={1}>

@@ -48,13 +48,16 @@ export function QueryListScreen({
 
   // Sort: favorites first, then alphabetical by label
   const sorted = useMemo(() => {
+    function sortName(q: EnrichedQuery): string {
+      if (q.meta.title) return q.meta.title;
+      if (q.source === 'scanned') return q.functionName ?? q.filePath;
+      return q.id;
+    }
     return [...queries].sort((a, b) => {
       const af = a.meta.favorite ? 0 : 1;
       const bf = b.meta.favorite ? 0 : 1;
       if (af !== bf) return af - bf;
-      const aName = a.meta.title ?? a.functionName ?? a.filePath;
-      const bName = b.meta.title ?? b.functionName ?? b.filePath;
-      return aName.localeCompare(bName);
+      return sortName(a).localeCompare(sortName(b));
     });
   }, [queries]);
 

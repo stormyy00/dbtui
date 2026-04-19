@@ -26,6 +26,18 @@ const DETAIL_HINTS = [
   { key: 'q',    label: 'quit'    },
 ];
 
+const CUSTOM_DETAIL_HINTS = [
+  { key: 'esc',  label: 'back'    },
+  { key: 'tab',  label: 'panel'   },
+  { key: 'z',    label: 'zoom'    },
+  { key: 'i',    label: 'edit sql'},
+  { key: 'r',    label: 'run'     },
+  { key: 'e',    label: 'explain' },
+  { key: 't',    label: 'title'   },
+  { key: 'c',    label: 'connect' },
+  { key: 'q',    label: 'quit'    },
+];
+
 interface Props {
   query: EnrichedQuery;
   engineState: UseEngineReturn;
@@ -49,12 +61,13 @@ export function QueryDetailScreen({
   const [connInput, setConnInput] = useState('');
 
   const titleEdit = useInlineEdit();
+  const sqlEdit = useInlineEdit();
+
+  const isCustom = query.source === 'custom';
 
   const { result, explainOutput, running, error, run, explain } = engineState;
 
-  const titleDisplay = query.meta.title
-    ? `${query.meta.title}`
-    : null;
+  const titleDisplay = query.meta.title ?? null;
 
   useInput((input, key) => {
     // Connect modal captures input
@@ -78,6 +91,15 @@ export function QueryDetailScreen({
       const committed = titleEdit.handleInput(input, key);
       if (committed !== null) {
         queryMeta.setTitle(query.id, committed);
+      }
+      return;
+    }
+
+    // SQL editing captures input (custom queries only)
+    if (sqlEdit.editing) {
+      const committed = sqlEdit.handleInput(input, key);
+      if (committed !== null) {
+        queryMeta.updateCustomSql(query.id, committed);
       }
       return;
     }
@@ -106,6 +128,12 @@ export function QueryDetailScreen({
       return;
     }
 
+    // Edit SQL for custom queries
+    if (input === 'i' && isCustom) {
+      sqlEdit.startEdit(query.rawSql);
+      return;
+    }
+
     if (input === 'c') {
       setConnInput(connStr);
       setShowConnect(true);
@@ -115,6 +143,7 @@ export function QueryDetailScreen({
     // Run / explain
     if ((input === 'r' || input === 'e' || input === 'E') && !running) {
       if (!connStr) { setConnInput(''); setShowConnect(true); return; }
+      if (!query.rawSql.trim()) return;
       if (input === 'r') {
         run(query.rawSql, connStr);
         queryMeta.recordRun(query.id);
@@ -140,11 +169,19 @@ export function QueryDetailScreen({
       />
       {divider}
 
-      {/* Title editing row */}
+      {/* Inline editing rows */}
       {titleEdit.editing && (
         <Box paddingX={1} paddingY={1}>
           <Text color={colors.muted}>Title: </Text>
           <Text color={colors.text}>{titleEdit.draft}</Text>
+          <Text inverse> </Text>
+          <Text dimColor>  [enter] save  [esc] cancel</Text>
+        </Box>
+      )}
+      {sqlEdit.editing && (
+        <Box paddingX={1} paddingY={1}>
+          <Text color={colors.muted}>SQL: </Text>
+          <Text color={colors.text}>{sqlEdit.draft}</Text>
           <Text inverse> </Text>
           <Text dimColor>  [enter] save  [esc] cancel</Text>
         </Box>
@@ -185,7 +222,7 @@ export function QueryDetailScreen({
       {showConnect ? (
         <ConnectModal value={connInput} />
       ) : (
-        <KeyBar hints={DETAIL_HINTS} />
+        <KeyBar hints={isCustom ? CUSTOM_DETAIL_HINTS : DETAIL_HINTS} />
       )}
     </Box>
   );

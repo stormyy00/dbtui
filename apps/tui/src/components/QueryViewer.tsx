@@ -1,11 +1,12 @@
 import React from 'react';
 import { Box, Text } from 'ink';
 import path from 'node:path';
+import type { EnrichedQuery } from '../types.js';
 import type { IndexedQuery } from '../lib/protocol.js';
 import { colors, SQL_KEYWORDS } from '../theme.js';
 
 interface Props {
-  query: IndexedQuery | null;
+  query: EnrichedQuery | null;
   title?: string | null;
 }
 
@@ -41,23 +42,40 @@ export function QueryViewer({ query, title }: Props) {
     );
   }
 
-  const relPath = path.relative(process.cwd(), query.filePath) || query.filePath;
+  const sql = query.rawSql;
+
+  if (!sql.trim() && query.source === 'custom') {
+    return (
+      <Box paddingY={1}>
+        <Text dimColor>No SQL yet — press [i] to write a query.</Text>
+      </Box>
+    );
+  }
 
   return (
     <Box flexDirection="column" gap={1}>
       {/* SQL with keyword highlighting */}
       <Box flexDirection="column">
-        {query.rawSql.split('\n').map((line, i) => (
+        {sql.split('\n').map((line, i) => (
           <SqlLine key={i} line={line} />
         ))}
       </Box>
 
       {/* Metadata row */}
       <Box>
-        <Text>
-          <Text color={colors.primary} bold>{KIND_BADGE[query.queryKind]}</Text>
-          <Text color={colors.muted}>  ·  {relPath}:{query.lineStart}</Text>
-        </Text>
+        {query.source === 'scanned' ? (
+          <Text>
+            <Text color={colors.primary} bold>{KIND_BADGE[query.queryKind]}</Text>
+            <Text color={colors.muted}>
+              {'  ·  '}
+              {path.relative(process.cwd(), query.filePath) || query.filePath}:{query.lineStart}
+            </Text>
+          </Text>
+        ) : (
+          <Text>
+            <Text color={colors.primary} bold>custom query</Text>
+          </Text>
+        )}
       </Box>
     </Box>
   );
